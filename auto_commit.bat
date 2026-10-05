@@ -4,4 +4,4 @@
 :: One-shot: auto_commit.bat
 :: Watch:    auto_commit.bat -Watch
 :: ============================================================
-powershell -ExecutionPolicy Bypass -File "%~dp0auto_commit.ps1" %* -Watch -IntervalMinutes 2 
+powershell -ExecutionPolicy Bypass -File "auto_commit.ps1" %* -Watch -IntervalMinutes 2 

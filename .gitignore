@@ -1,6 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+auto_commit.ps1
+auto_commit.bat
 /node_modules
 /.pnp
 .pnp.*
