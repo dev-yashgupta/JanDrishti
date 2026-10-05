@@ -1,0 +1,33 @@
+# ── Web framework ─────────────────────────────────────────────
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+
+# ── Database ──────────────────────────────────────────────────
+sqlalchemy==2.0.41
+alembic==1.16.1
+psycopg2-binary==2.9.10
+
+# ── Auth / Security ───────────────────────────────────────────
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
+
+# ── Validation ────────────────────────────────────────────────
+pydantic==2.11.4
+pydantic-settings==2.9.1
+email-validator==2.2.0
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dotenv==1.1.0
+aiofiles==24.1.0
+pillow==11.2.1
+
+# ── AI / NLP (pure-Python, no compiled extension needed) ──────
+# scikit-learn requires Python <=3.13 wheels; the AI module uses
+# a built-in TF-IDF + cosine similarity implementation instead.
+
+# ── Testing ───────────────────────────────────────────────────
+pytest==8.3.5
+pytest-asyncio==0.26.0
+httpx==0.28.1
