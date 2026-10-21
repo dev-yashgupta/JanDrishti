@@ -1,23 +1,36 @@
 """
-Password hashing (bcrypt via passlib) and JWT creation/verification.
+Password hashing (bcrypt direct) and JWT creation/verification.
+
+Uses the `bcrypt` library directly instead of passlib, because
+passlib 1.7.4 is incompatible with bcrypt >= 4.0 (the __about__
+attribute was removed in newer bcrypt versions).
 """
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ── Password helpers ──────────────────────────────────────────
 
 def hash_password(plain: str) -> str:
-    return pwd_context.hash(plain)
+    """Hash a password using bcrypt. Returns a UTF-8 string."""
+    # bcrypt has a 72-byte limit — truncate defensively
+    pw_bytes = plain.encode("utf-8")[:72]
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(pw_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    """Verify a password against a bcrypt hash. Returns True/False."""
+    try:
+        pw_bytes = plain.encode("utf-8")[:72]
+        hash_bytes = hashed.encode("utf-8")
+        return bcrypt.checkpw(pw_bytes, hash_bytes)
+    except (ValueError, TypeError):
+        return False
 
 
 # ── JWT helpers ───────────────────────────────────────────────
