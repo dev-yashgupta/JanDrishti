@@ -10,6 +10,7 @@ are called through this service so they can be swapped independently.
 """
 from __future__ import annotations
 import json
+import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -24,6 +25,8 @@ from app.ai.llm.gemini_provider import (
     is_gemini_available, GeminiClassifier, gemini_score_scores, LLMScores,
 )
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

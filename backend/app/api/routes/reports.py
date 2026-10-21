@@ -30,6 +30,7 @@ from app.schemas.report import (
     StatusHistoryResponse,
 )
 from app.ai.ai_service import ai_service, _ExistingReport
+from app.ai.llm.gemini_provider import gemini_summarise_cluster, is_gemini_available
 from app.ai.similarity.tfidf_engine import haversine_km
 from app.core.config import settings
 
@@ -142,14 +143,31 @@ def _handle_clustering(db: Session, report: Report, similar_reports):
             return
 
     # Create new cluster
+    # Try Gemini for a human-readable summary, fall back to template
+    city_name = report.location.city if report.location else "unknown"
+    cluster_summary: str
+    if is_gemini_available():
+        llm_summary = gemini_summarise_cluster(
+            cluster_title=report.title,
+            report_texts=[r.description for r in similar_reports[:5]] or [report.description],
+            city=city_name,
+        )
+        cluster_summary = llm_summary or (
+            f"Multiple reports about: {report.title}. "
+            f"Location: {city_name}. "
+            f"This cluster groups {len(similar_reports)+1} similar reports in the area."
+        )
+    else:
+        cluster_summary = (
+            f"Multiple reports about: {report.title}. "
+            f"Location: {city_name}. "
+            f"This cluster groups {len(similar_reports)+1} similar reports in the area."
+        )
+
     cluster = ProblemCluster(
         id=str(uuid.uuid4()),
         title=report.title,
-        summary=(
-            f"Multiple reports about: {report.title}. "
-            f"Location: {report.location.city if report.location else 'unknown'}. "
-            f"This cluster groups {len(similar_reports)+1} similar reports in the area."
-        ),
+        summary=cluster_summary,
         category_id=report.category_id,
         location_id=report.location_id,
         report_count=len(similar_ids) + 1,
