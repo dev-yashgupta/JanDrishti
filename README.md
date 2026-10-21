@@ -1,12 +1,12 @@
-# JanDrishti AI — Frontend
+# JanDrishti AI
 
 **An AI-Powered Platform for Discovering and Prioritising Unresolved Community Problems in India**
 
-> ⚡ This is the **frontend** sub-project. The backend (FastAPI + PostgreSQL) lives in `../backend/`.
+> See a Problem. Report It. Prioritise It. Resolve It.
 
 ---
 
-## Overview
+## What Is JanDrishti AI?
 
 JanDrishti AI is a civic intelligence platform that transforms scattered community reports into prioritised, geographically actionable problems. Citizens report issues, AI classifies and scores them, and authority dashboards surface what needs attention most urgently.
 
@@ -20,120 +20,84 @@ Report → AI Analysis → Classification → Duplicate Detection
 
 ---
 
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript 5 |
-| Styling | Tailwind CSS v4 |
-| UI Components | Radix UI primitives + custom shadcn-style system |
-| State | Zustand (auth + UI stores) |
-| Forms | React Hook Form + Zod v4 |
-| Charts | Recharts |
-| Maps | Leaflet / React-Leaflet (dynamic import, SSR-safe) |
-| i18n | Custom I18nContext (EN + HI, extensible) |
-| Icons | Lucide React |
-
----
-
-## Project Structure
+## Monorepo Structure
 
 ```
-src/
-├── app/                        # Next.js App Router pages
-│   ├── (public)/               # /, /about, /login, /register, /explore
-│   ├── dashboard/              # Citizen dashboard
-│   ├── report/                 # Report submission wizard
-│   ├── reports/[id]/           # Report detail
-│   ├── notifications/          # Citizen notifications
-│   ├── profile/                # User profile
-│   └── admin/                  # Authority portal
-│       ├── dashboard/          # KPI dashboard + charts
-│       ├── problems/[id]/      # Problem detail + status workflow
-│       ├── map/                # Interactive Leaflet map
-│       ├── clusters/           # Problem clusters (AI grouped)
-│       ├── analytics/          # Full analytics page
-│       ├── assignments/        # Assign problems to departments
-│       ├── users/              # User management
-│       └── settings/           # AI config, weights, thresholds
-├── components/
-│   ├── ui/                     # Base primitives (Button, Card, Input…)
-│   ├── layout/                 # Navbar, Sidebar, AppShell, Footer
-│   ├── shared/                 # ReportCard, PriorityBadge, AIAnalysisCard…
-│   ├── charts/                 # Recharts wrappers
-│   ├── maps/                   # ProblemsMap (Leaflet, dynamic)
-│   ├── forms/                  # LoginForm, RegisterForm
-│   └── pages/                  # Full page components
-├── contexts/                   # I18nContext
-├── hooks/                      # useAuth, useReports, useToast
-├── lib/                        # utils, constants, validations
-├── locales/                    # en.ts, hi.ts translations
-├── services/                   # api.ts (HTTP layer), mockData.ts
-├── store/                      # authStore, uiStore (Zustand)
-└── types/                      # index.ts — all TypeScript types
+JanDrishti/
+├── frontend/          # Next.js 16 + TypeScript + Tailwind CSS
+│   ├── src/app/       # App Router pages (21 routes)
+│   ├── src/components/# UI components, charts, maps
+│   ├── src/services/  # API service layer + mock data
+│   └── Dockerfile
+│
+├── backend/           # FastAPI + PostgreSQL + AI/NLP
+│   ├── app/
+│   │   ├── api/routes/  # 9 routers (auth, reports, dashboard, etc.)
+│   │   ├── models/      # 14 SQLAlchemy models
+│   │   ├── schemas/     # Pydantic validation
+│   │   ├── ai/          # Classifier, scoring, similarity, Gemini LLM
+│   │   ├── core/        # Config, security, RBAC
+│   │   └── database/    # Session + Alembic
+│   ├── alembic/        # Migrations
+│   ├── scripts/seed.py # Demo data
+│   ├── tests/          # 45 tests (auth, reports, AI)
+│   └── Dockerfile
+│
+├── docker-compose.yml  # Full stack: PostgreSQL + Backend + Frontend
+├── .env.example        # Root-level env template
+└── README.md           # This file
 ```
 
 ---
 
-## Pages
+## Quick Start
 
-### Public
-| Route | Description |
-|---|---|
-| `/` | Landing page with hero, how-it-works, live critical problems |
-| `/about` | Platform overview, AI architecture, priority formula |
-| `/login` | Login with demo account shortcuts |
-| `/register` | Multi-field registration (citizen or authority) |
-| `/explore` | Browse/search/filter all problems publicly |
-
-### Citizen (authenticated)
-| Route | Description |
-|---|---|
-| `/dashboard` | Summary stats + my reports list |
-| `/report` | 4-step report wizard with live AI preview |
-| `/reports` | All my reports |
-| `/reports/[id]` | Full report detail, status timeline, AI card |
-| `/notifications` | In-app notification list |
-| `/profile` | Edit personal details |
-
-### Authority / Admin
-| Route | Description |
-|---|---|
-| `/admin/dashboard` | KPI cards + charts + critical problems |
-| `/admin/problems` | Filterable, sortable problems list |
-| `/admin/problems/[id]` | Detail + status workflow + assignment actions |
-| `/admin/map` | Interactive Leaflet map with priority-coloured markers |
-| `/admin/clusters` | AI-detected problem clusters with expandable reports |
-| `/admin/analytics` | Full analytics: category, status, priority, city, timeline |
-| `/admin/assignments` | Assign unassigned problems to departments |
-| `/admin/users` | View + activate/deactivate platform users |
-| `/admin/settings` | Configure AI weights, similarity thresholds |
-
----
-
-## Setup
-
-### Prerequisites
-- Node.js 18+
-- npm 9+
-
-### Install & run
+### Option A — Docker (recommended, everything in one command)
 
 ```bash
-cd frontend
-cp .env.example .env.local
-npm install
-npm run dev
+cd JanDrishti
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+docker compose up --build
 ```
 
-The app runs at **http://localhost:3000**.
+- Frontend: http://localhost:3000
+- Backend API docs: http://localhost:8000/api/docs
+- Database: localhost:5432
 
-### Demo mode
+Seed demo data:
+```bash
+docker compose exec backend python scripts/seed.py
+```
 
-By default `NEXT_PUBLIC_USE_MOCK=true` — the app runs entirely on synthetic demo data with no backend required.
+### Option B — Local development (frontend + backend separately)
 
-### Demo accounts (pre-filled on the login page)
+**Backend:**
+```bash
+cd JanDrishti/backend
+pip install -r requirements.txt
+cp .env.example .env                    # Set DATABASE_URL + SECRET_KEY
+# Create PostgreSQL database:
+#   CREATE USER jandrishti WITH PASSWORD 'jandrishti_pass';
+#   CREATE DATABASE jandrishti_db OWNER jandrishti;
+alembic upgrade head                    # Run migrations
+python scripts/seed.py                  # Seed demo data
+uvicorn app.main:app --reload           # Start at :8000
+```
+
+**Frontend:**
+```bash
+cd JanDrishti/frontend
+npm install
+cp .env.example .env.local              # NEXT_PUBLIC_USE_MOCK=true for demo mode
+npm run dev                             # Start at :3000
+```
+
+For real backend integration, set `NEXT_PUBLIC_USE_MOCK=false` and `NEXT_PUBLIC_API_URL=http://localhost:8000/api` in `frontend/.env.local`.
+
+---
+
+## Demo Accounts
 
 | Role | Email | Password |
 |---|---|---|
@@ -143,35 +107,119 @@ By default `NEXT_PUBLIC_USE_MOCK=true` — the app runs entirely on synthetic de
 
 ---
 
-## Connecting the Backend
+## Tech Stack
 
-1. Start the FastAPI backend (see `../backend/README.md`)
-2. Set `NEXT_PUBLIC_API_URL=http://localhost:8000/api` in `.env.local`
-3. Set `NEXT_PUBLIC_USE_MOCK=false`
-4. Restart the dev server
+### Frontend
+| Technology | Purpose |
+|---|---|
+| Next.js 16 (App Router) | Framework |
+| React 19 + TypeScript | UI + type safety |
+| Tailwind CSS v4 | Styling |
+| Radix UI primitives | Accessible components |
+| Recharts | Analytics charts |
+| Leaflet / React-Leaflet | Interactive maps |
+| Zustand | State management |
+| React Hook Form + Zod | Form validation |
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| FastAPI 0.157 | Web framework |
+| Python 3.11+ | Language |
+| SQLAlchemy 2.1 | ORM |
+| PostgreSQL 16 | Database |
+| Alembic | Migrations |
+| python-jose (JWT) | Authentication |
+| bcrypt | Password hashing |
+| Pydantic v2 | Validation |
+| Google Gemini API (optional) | LLM-based AI |
+
+### AI / NLP
+| Component | Implementation |
+|---|---|
+| Classifier | Keyword rules (local) or Gemini LLM (optional) |
+| Similarity | Pure-Python TF-IDF + cosine similarity + haversine geo filter |
+| Severity / Urgency | Keyword pattern scoring + optional Gemini refinement |
+| Priority Engine | Weighted formula (severity 30%, urgency 25%, frequency 20%, impact 15%, persistence 10%) |
 
 ---
 
-## Build
+## Key Features
 
+- **Citizen reporting** — Multi-step wizard with location, photos, live AI preview
+- **AI classification** — 12 civic categories with confidence scores
+- **Priority scoring** — Transparent 0–100 score with explainable breakdown
+- **Duplicate detection** — TF-IDF similarity + geographic radius filtering
+- **Problem clusters** — Auto-grouped similar reports with AI summaries
+- **Status workflow** — REPORTED → UNDER_REVIEW → VERIFIED → ASSIGNED → IN_PROGRESS → RESOLVED → CITIZEN_VERIFICATION → CLOSED
+- **Authority dashboard** — KPI cards, charts, critical problem alerts
+- **Interactive map** — Priority-coloured markers with info popups and filters
+- **Analytics** — Category, status, priority, city, timeline charts
+- **Notifications** — In-app notifications for status changes
+- **Multilingual** — English + Hindi translations, extensible to 8 Indic languages
+- **Role-based access** — Citizen, Authority, Super Admin with JWT auth
+- **File uploads** — Images (JPEG/PNG/WEBP) and video (MP4) with validation
+- **Audit logs** — Administrative action trail
+- **Configurable AI** — Admin can adjust similarity thresholds and priority weights
+
+---
+
+## Enabling Gemini AI (Optional)
+
+The backend includes a Gemini LLM provider for enhanced multilingual classification and scoring. Without it, a pure-Python local engine handles everything.
+
+1. Get a free API key at https://aistudio.google.com/apikey
+2. Add to `backend/.env`:
+   ```
+   GEMINI_API_KEY=your-key-here
+   AI_PROVIDER=auto
+   ```
+3. Restart the backend
+
+Check which provider is active:
 ```bash
-npm run build   # Production build
-npm start       # Serve production build
+curl http://localhost:8000/api/ai/status
 ```
 
 ---
 
-## AI Architecture (Frontend)
+## API Documentation
 
-The frontend includes a **local NLP simulation** (`simulateAI` in `ReportProblemPage.tsx`) that:
-- Detects danger/health/persistence keywords in report text
-- Calculates severity, urgency, frequency, community impact, persistence scores (1–10)
-- Computes a weighted priority score (0–100)
-- Displays reasoning inline before submission
+Full interactive docs available at `http://localhost:8000/api/docs` when the backend is running.
 
-This runs entirely in the browser — no backend required for the AI preview. When the backend is connected, the real AI pipeline (Python, scikit-learn, sentence-transformers) takes over.
+Key endpoints:
+- `POST /api/auth/register` — Register
+- `POST /api/auth/login` — Login → JWT
+- `POST /api/reports` — Create report (triggers AI pipeline)
+- `GET /api/reports` — List/filter/search reports
+- `PATCH /api/reports/{id}/status` — Change status (authority)
+- `POST /api/reports/{id}/assign` — Assign to department
+- `GET /api/dashboard/summary` — KPI summary
+- `GET /api/dashboard/analytics` — Full analytics
+- `GET /api/clusters` — Problem clusters
+- `GET /api/admin/ai-config` — AI configuration
 
-### Priority Formula
+---
+
+## Testing
+
+### Backend
+```bash
+cd JanDrishti/backend
+pytest tests/ -v
+# 45 passed
+```
+
+### Frontend
+```bash
+cd JanDrishti/frontend
+npm run build
+# 21 routes compiled successfully
+```
+
+---
+
+## Priority Score Formula
 
 ```
 priority_score =
@@ -191,29 +239,31 @@ priority_score =
 
 ---
 
-## Multilingual Architecture
+## Environment Variables
 
-- `src/locales/en.ts` — English translations
-- `src/locales/hi.ts` — Hindi translations
-- `src/contexts/I18nContext.tsx` — React context + `useI18n()` hook
-- Add a new language by creating `src/locales/xx.ts` and registering it
+### Backend (`backend/.env`)
+See `backend/.env.example` for all options. Key ones:
+- `DATABASE_URL` — PostgreSQL connection string
+- `SECRET_KEY` — JWT signing key
+- `GEMINI_API_KEY` — Optional, enables LLM-based AI
+- `AI_PROVIDER` — `auto`, `gemini`, or `local`
 
-Currently supported: English, Hindi. Translations for Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada are scaffolded.
+### Frontend (`frontend/.env.local`)
+See `frontend/.env.example`. Key ones:
+- `NEXT_PUBLIC_API_URL` — Backend API base URL
+- `NEXT_PUBLIC_USE_MOCK` — `true` for demo mode (no backend needed)
 
 ---
 
-## Responsible AI Notice
+## Responsible AI
 
-AI analysis is a **decision-support tool only**. Authorities are responsible for all final decisions. AI predictions may be incorrect. Citizen reports should undergo appropriate verification before official action.
+AI recommendations are **decision-support tools only**. Authorities are responsible for all final decisions. AI predictions may be incorrect. Citizen reports should undergo appropriate verification before official action.
 
 ---
 
-## Known Limitations (Demo)
+## Disclaimer
 
-- Authentication calls mock the backend — tokens are simulated
-- File uploads are accepted by the UI but not persisted without the backend
-- Map coordinates come from seeded demo data; real GPS pinning requires browser geolocation integration
-- Multilingual AI classification is not yet implemented — the current model only supports English text
+JanDrishti AI is a demonstration platform. All data displayed in demo mode is synthetic and does not represent real government complaints. Real deployment would require integration with verified government data sources and compliance with applicable data-protection laws.
 
 ---
 
