@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     PRIORITY_WEIGHT_COMMUNITY_IMPACT: float = 0.15
     PRIORITY_WEIGHT_PERSISTENCE: float = 0.10
 
+    # ── Gemini LLM provider (optional) ───────────────────────
+    # Set GEMINI_API_KEY in .env to enable LLM-based analysis.
+    # If empty, the local pure-Python engine is used automatically.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_EMBEDDING_MODEL: str = "embedding-001"
+    AI_PROVIDER: str = "auto"  # "auto" | "gemini" | "local"
+
     # ── Pagination ────────────────────────────────────────────
     DEFAULT_PAGE_SIZE: int = 10
     MAX_PAGE_SIZE: int = 100

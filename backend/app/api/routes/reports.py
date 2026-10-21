@@ -239,7 +239,7 @@ def list_reports(
     priority_level: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
     state: Optional[str] = Query(None),
-    sort_by: str = Query("priority", regex="^(priority|newest|oldest|most_reported)$"),
+    sort_by: str = Query("priority", pattern="^(priority|newest|oldest|most_reported)$"),
     my: bool = Query(False),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
