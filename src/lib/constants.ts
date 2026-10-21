@@ -8,7 +8,7 @@ export const APP_DESCRIPTION =
   'JanDrishti AI uses artificial intelligence and community intelligence to identify, analyse and prioritise unresolved civic problems across India.';
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  process.env.NEXT_PUBLIC_API_URL || '/api';  // relative path uses Next.js rewrites proxy
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_FILE_SIZE_MB = 10;
