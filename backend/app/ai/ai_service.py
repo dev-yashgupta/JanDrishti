@@ -158,10 +158,10 @@ class AIService:
         """
         combined_text = f"{title} {description}"
 
-        # 1. Classification
-        cls: ClassificationResult = classifier.classify(title, description)
+        # 1. Classification (Gemini if available, else keyword)
+        cls: ClassificationResult = self._classifier.classify(title, description)
 
-        # 2. Severity & urgency
+        # 2. Severity & urgency (local baseline always computed for fallback)
         severity = calculate_severity(title, description)
         urgency = calculate_urgency(title, description)
 
@@ -199,13 +199,30 @@ class AIService:
         freq_raw = min(len(similar_reports) + 1, 10)
         frequency = round(1.0 + (freq_raw / 10.0) * 9.0, 1)
 
-        # 5. Community impact
-        community_impact = _estimate_community_impact(
+        # 5. Local estimates for community impact & persistence (fallback values)
+        community_impact_local = _estimate_community_impact(
             title, description, len(similar_reports)
         )
+        persistence_local = _estimate_persistence(description)
 
-        # 6. Persistence
-        persistence = _estimate_persistence(description)
+        # 5b. If Gemini is available, refine severity/urgency/persistence/impact
+        if is_gemini_available():
+            llm_scores: LLMScores = gemini_score_scores(
+                title=title,
+                description=description,
+                similar_count=len(similar_reports),
+                fallback_severity=severity,
+                fallback_urgency=urgency,
+                fallback_persistence=persistence_local,
+                fallback_community_impact=community_impact_local,
+            )
+            severity = llm_scores.severity
+            urgency = llm_scores.urgency
+            persistence = llm_scores.persistence
+            community_impact = llm_scores.community_impact
+        else:
+            community_impact = community_impact_local
+            persistence = persistence_local
 
         # 7. Priority
         priority: PriorityResult = calculate_priority(
