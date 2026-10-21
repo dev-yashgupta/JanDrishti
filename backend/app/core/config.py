@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # ── Database ──────────────────────────────────────────────
+    # Use +psycopg2 to force the installed psycopg2-binary driver
+    # (SQLAlchemy 2.1 defaults to psycopg3 which isn't installed)
     DATABASE_URL: str = (
-        "postgresql://jandrishti:jandrishti_pass@localhost:5432/jandrishti_db"
+        "postgresql+psycopg2://jandrishti:jandrishti_pass@localhost:5432/jandrishti_db"
     )
 
     # ── Security ──────────────────────────────────────────────
