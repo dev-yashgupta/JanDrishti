@@ -43,3 +43,14 @@ class AIAnalysis(Base):
 
     # relationships
     report = relationship("Report", back_populates="ai_analysis")
+
+    @property
+    def priority_breakdown(self) -> dict:
+        """Computed property for the API response schema."""
+        return {
+            "severity": self.severity_score,
+            "urgency": self.urgency_score,
+            "frequency": self.frequency_score,
+            "community_impact": self.community_impact_score,
+            "persistence": self.persistence_score,
+        }
