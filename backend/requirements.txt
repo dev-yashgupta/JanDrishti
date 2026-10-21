@@ -27,6 +27,10 @@ pillow==11.2.1
 # scikit-learn requires Python <=3.13 wheels; the AI module uses
 # a built-in TF-IDF + cosine similarity implementation instead.
 
+# ── Optional LLM provider ────────────────────────────────────
+# Enables Gemini-based classification and scoring when GEMINI_API_KEY is set.
+google-generativeai==0.8.6
+
 # ── Testing ───────────────────────────────────────────────────
 pytest==8.3.5
 pytest-asyncio==0.26.0

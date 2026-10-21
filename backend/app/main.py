@@ -87,6 +87,17 @@ def create_app() -> FastAPI:
     def health():
         return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
+    @app.get("/api/ai/status", tags=["ai"])
+    def ai_status():
+        """Reports which AI provider is active (gemini or local)."""
+        from app.ai.llm.gemini_provider import is_gemini_available
+        return {
+            "provider": "gemini" if is_gemini_available() else "local",
+            "gemini_configured": bool(settings.GEMINI_API_KEY),
+            "ai_provider_setting": settings.AI_PROVIDER,
+            "model": settings.GEMINI_MODEL if is_gemini_available() else "jd-nlp-v1.0",
+        }
+
     return app
 
 
