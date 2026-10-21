@@ -1,10 +1,9 @@
 import { useState, useCallback } from 'react';
 import { reportsApi } from '@/services/api';
 import { MOCK_REPORTS, mockPaginated } from '@/services/mockData';
+import { shouldUseMock } from '@/lib/apiHealth';
 import { useToast } from './useToast';
 import type { Report, ReportFilters, PaginatedResponse } from '@/types';
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true' || true; // default mock in dev
 
 export function useReports(initialFilters?: ReportFilters) {
   const toast = useToast();
@@ -17,7 +16,9 @@ export function useReports(initialFilters?: ReportFilters) {
       setLoading(true);
       const appliedFilters = overrideFilters ?? filters;
       try {
-        if (USE_MOCK) {
+        const useMock = await shouldUseMock();
+
+        if (useMock) {
           let data = [...MOCK_REPORTS];
           if (appliedFilters.search) {
             const q = appliedFilters.search.toLowerCase();
@@ -37,7 +38,6 @@ export function useReports(initialFilters?: ReportFilters) {
           if (appliedFilters.city)
             data = data.filter((r) => r.location?.city === appliedFilters.city);
 
-          // Sorting
           if (appliedFilters.sort_by === 'priority') {
             data.sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0));
           } else if (appliedFilters.sort_by === 'oldest') {
@@ -52,7 +52,9 @@ export function useReports(initialFilters?: ReportFilters) {
           setReports(result);
         }
       } catch {
-        toast.error('Failed to load reports');
+        // Fallback to mock on API error
+        toast.error('Failed to load reports — using demo data');
+        setReports(mockPaginated(MOCK_REPORTS, 1, 10));
       } finally {
         setLoading(false);
       }
@@ -79,12 +81,19 @@ export function useReport(id: string) {
   const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
-      if (USE_MOCK) {
+      const useMock = await shouldUseMock();
+      if (useMock) {
         const found = MOCK_REPORTS.find((r) => r.id === id);
         setReport(found ?? null);
       } else {
-        const result = await reportsApi.get(id);
-        setReport(result);
+        try {
+          const result = await reportsApi.get(id);
+          setReport(result);
+        } catch {
+          // Fallback to mock
+          const found = MOCK_REPORTS.find((r) => r.id === id);
+          setReport(found ?? null);
+        }
       }
     } finally {
       setLoading(false);
