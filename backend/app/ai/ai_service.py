@@ -20,6 +20,9 @@ from app.ai.scoring.priority_engine import calculate_priority, PriorityResult
 from app.ai.similarity.tfidf_engine import (
     similarity_engine, haversine_km, TFIDFSimilarityEngine,
 )
+from app.ai.llm.gemini_provider import (
+    is_gemini_available, GeminiClassifier, gemini_score_scores, LLMScores,
+)
 from app.core.config import settings
 
 
@@ -109,10 +112,22 @@ class AIService:
     Orchestrates all AI sub-components.
     Stateless by design — similarity engine is passed in to keep this
     unit-testable.
+
+    Provider selection:
+      AI_PROVIDER = "auto"   → use Gemini if GEMINI_API_KEY is set, else local
+      AI_PROVIDER = "gemini" → require Gemini (falls back to local on error)
+      AI_PROVIDER = "local"  → always use the pure-Python engine
     """
 
     def __init__(self, sim_engine: Optional[TFIDFSimilarityEngine] = None):
         self._sim = sim_engine or similarity_engine
+        # Build the classifier chain — Gemini wraps the keyword classifier
+        if settings.AI_PROVIDER in ("auto", "gemini") and is_gemini_available():
+            self._classifier: ProblemClassifier = GeminiClassifier(fallback=classifier)
+            logger.info("AIService using Gemini provider (with local fallback)")
+        else:
+            self._classifier = classifier
+            logger.info("AIService using local provider")
 
     def warm_up(self, existing_reports: list[_ExistingReport]) -> None:
         """
