@@ -183,11 +183,9 @@ Report submitted
      ↓
 text_cleaner.py — normalize, tokenize, stopwords, n-grams
      ↓
-KeywordClassifier — keyword-rule scoring → category + confidence
+Classifier (Gemini LLM if API key set, else KeywordClassifier)
      ↓
-severity_analyzer.py — keyword pattern scoring → 1-10
-     ↓
-urgency_analyzer.py  — keyword + duration signals → 1-10
+Severity + Urgency scoring (local, then optionally refined by Gemini)
      ↓
 TFIDFSimilarityEngine — cosine similarity + haversine geo filter
      ↓
@@ -198,10 +196,28 @@ priority_engine.py — weighted formula → 0-100 score + level + reasoning
 stored in ai_analyses table, report.priority_level updated
 ```
 
+### Two AI Providers (auto-switchable)
+
+| Provider | When | What it does |
+|---|---|---|
+| **Local (pure-Python)** | Default, no API key needed | TF-IDF + keyword classification + pattern-based scoring |
+| **Gemini LLM** | When `GEMINI_API_KEY` is set | Multilingual classification, LLM-refined severity/urgency scores, cluster summaries, optional embeddings |
+
+Set `AI_PROVIDER=auto` (default) to use Gemini when available and fall back to local on any error. Set `AI_PROVIDER=local` to always use the local engine.
+
+Get a free Gemini API key at https://aistudio.google.com/apikey
+
 All components implement ABCs (ProblemClassifier, SimilarityEngine) so they can be replaced with:
 - BERT / multilingual transformer classifiers
 - Sentence-transformers embeddings
-- LLM-based analysis APIs
+- Other LLM APIs (OpenAI, Anthropic, etc.)
+
+### AI Status Endpoint
+
+```bash
+curl http://localhost:8000/api/ai/status
+# {"provider": "local", "gemini_configured": false, ...}
+```
 
 ---
 
@@ -213,6 +229,10 @@ pytest tests/ -v
 ```
 
 Tests use SQLite in-memory — no PostgreSQL required.
+
+```
+45 passed in 8.5s
+```
 
 ---
 
@@ -229,5 +249,6 @@ Tests use SQLite in-memory — no PostgreSQL required.
 ## Notes
 
 - **Python 3.14**: scikit-learn has no Python 3.14 wheel yet. The AI module uses a pure-Python TF-IDF + cosine similarity implementation. Switch to scikit-learn's `TfidfVectorizer` + `LogisticRegression` for Python 3.11/3.12/3.13.
+- **Gemini LLM**: Set `GEMINI_API_KEY` in `.env` to enable LLM-based classification and scoring. Without a key, the local engine is used automatically. Get a free key at https://aistudio.google.com/apikey
 - **File uploads** are stored locally in `uploads/`. Replace `save_file()` in `media.py` with S3/Cloudinary for production.
 - **AI analysis** runs synchronously in the report-creation endpoint. For high traffic, move it to a Celery/Redis background task.
