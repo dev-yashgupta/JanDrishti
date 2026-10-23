@@ -1,13 +1,16 @@
-import type { NextConfig } from "next";
+﻿import type { NextConfig } from "next";
 
 const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
 
-const nextConfig: NextConfig = {
-  // Enable standalone output for Docker builds
-  output: "standalone",
+// Enable standalone output only when building for Docker/production.
+// "next start" (local dev) does NOT work with output: standalone.
+const isDocker = process.env.BUILD_TARGET === "docker";
 
-  // Proxy /api/* requests to the FastAPI backend in development
-  // This avoids CORS issues and simplifies the frontend config
+const nextConfig: NextConfig = {
+  ...(isDocker ? { output: "standalone" } : {}),
+
+  // Proxy /api/* and /uploads/* to the FastAPI backend.
+  // Works in both "next dev" and "next start" modes.
   async rewrites() {
     return [
       {
@@ -23,12 +26,6 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/health`,
       },
     ];
-  },
-
-  // Allow Leaflet CSS to load
-  webpack: (config) => {
-    config.externals = config.externals || [];
-    return config;
   },
 };
 
