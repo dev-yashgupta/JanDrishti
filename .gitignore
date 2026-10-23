@@ -41,3 +41,23 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Test artifacts
+*.db
+.pytest_cache/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+
+# Runtime uploads
+backend/uploads/
+
+# OS
+Thumbs.db

@@ -19,10 +19,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # ── Database ──────────────────────────────────────────────
-    # Use +psycopg2 to force the installed psycopg2-binary driver
-    # (SQLAlchemy 2.1 defaults to psycopg3 which isn't installed)
+    # Uses psycopg3 dialect (postgresql+psycopg). For Neon, set DATABASE_URL
+    # in .env: postgresql+psycopg://user:pass@host/db?sslmode=require
     DATABASE_URL: str = (
-        "postgresql+psycopg2://jandrishti:jandrishti_pass@localhost:5432/jandrishti_db"
+        "postgresql+psycopg://jandrishti:jandrishti_pass@localhost:5432/jandrishti_db"
     )
 
     # ── Security ──────────────────────────────────────────────

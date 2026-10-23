@@ -1,0 +1,19 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Test artifacts
+test.db
+.pytest_cache/
+.coverage
+
+# Virtual environment
+.venv/
+venv/
+
+# Runtime uploads
+uploads/
+
+# Real env (never commit)
+.env
