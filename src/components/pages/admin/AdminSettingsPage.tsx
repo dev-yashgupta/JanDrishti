@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DemoLabel } from '@/components/shared/DemoLabel';
 import { useToast } from '@/hooks/useToast';
 import { PRIORITY_WEIGHTS, SIMILARITY_THRESHOLD } from '@/lib/constants';
 import { Brain, Settings, Sliders, Tag, AlertTriangle } from 'lucide-react';
@@ -31,9 +30,21 @@ export function AdminSettingsPage() {
   async function saveConfig() {
     if (!weightsValid) { toast.error('Invalid weights', 'Priority weights must sum to 1.0'); return; }
     setSaving(true);
-    await new Promise(r => setTimeout(r, 600));
-    toast.success('Settings saved', 'AI configuration updated successfully.');
-    setSaving(false);
+    try {
+      const { aiConfigApi } = await import('@/services/api');
+      await aiConfigApi.update({
+        similarity_threshold: simThreshold,
+        similarity_location_radius_km: simRadius,
+        priority_weights: weights,
+        severity_high_threshold: 7,
+        urgency_high_threshold: 7,
+      });
+      toast.success('Settings saved', 'AI configuration updated on the backend.');
+    } catch {
+      toast.error('Save failed', 'Could not update AI configuration.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateWeight(key: keyof WeightConfig, value: string) {
@@ -46,7 +57,7 @@ export function AdminSettingsPage() {
       <div className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-2">
           <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-          <DemoLabel />
+
         </div>
         <p className="text-slate-500 text-sm mb-8">Configure AI thresholds, priority weights, and system behaviour.</p>
 

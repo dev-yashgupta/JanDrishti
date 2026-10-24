@@ -29,6 +29,20 @@ export function clearStoredToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+/** Called automatically on any 401 — wipes token + Zustand state */
+function handleUnauthorized() {
+  clearStoredToken();
+  // Clear Zustand auth state without importing the store (avoids circular deps)
+  // The store's persist key is 'jd-auth'
+  try {
+    localStorage.removeItem('jd-auth');
+  } catch { /* ignore */ }
+  // Redirect to login only if we are in a browser and not already there
+  if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login';
+  }
+}
+
 // ── Base fetch wrapper ───────────────────────────────────────
 interface RequestOptions {
   method?: string;
@@ -58,6 +72,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: 'Request failed' }));
+
+    // 401 = token invalid or expired → clear auth and redirect
+    if (res.status === 401) {
+      handleUnauthorized();
+    }
+
     throw new APIError(errorData.detail || 'Request failed', res.status, errorData.errors);
   }
 
@@ -179,9 +199,9 @@ export const notificationsApi = {
 
 // ── Users API (admin) ─────────────────────────────────────────
 export const usersApi = {
-  list: (params?: { search?: string; role?: string; page?: number }) => {
+  list: (params?: { search?: string; role?: string; page?: number; per_page?: number }) => {
     const qp = new URLSearchParams();
-    if (params) Object.entries(params).forEach(([k, v]) => { if (v) qp.set(k, String(v)); });
+    if (params) Object.entries(params).forEach(([k, v]) => { if (v !== undefined) qp.set(k, String(v)); });
     return request<PaginatedResponse<User>>(`/users?${qp}`);
   },
   get: (id: string) => request<User>(`/users/${id}`),
@@ -189,6 +209,8 @@ export const usersApi = {
     request<User>(`/users/${id}`, { method: 'PATCH', body: data }),
   deactivate: (id: string) =>
     request<User>(`/users/${id}/deactivate`, { method: 'PATCH' }),
+  activate: (id: string) =>
+    request<User>(`/users/${id}/activate`, { method: 'PATCH' }),
 };
 
 // ── AI Config API (super admin) ───────────────────────────────

@@ -1,104 +1,145 @@
-import { useState, useCallback } from 'react';
-import { reportsApi } from '@/services/api';
-import { MOCK_REPORTS, mockPaginated } from '@/services/mockData';
-import { shouldUseMock } from '@/lib/apiHealth';
-import { useToast } from './useToast';
-import type { Report, ReportFilters, PaginatedResponse } from '@/types';
+'use client';
+import { useState, useCallback, useRef } from 'react';
+import { reportsApi, dashboardApi, categoriesApi, clustersApi } from '@/services/api';
+import type {
+  Report, ReportFilters, PaginatedResponse, Category,
+  DashboardSummary, CitizenDashboardSummary, AnalyticsData, ProblemCluster,
+} from '@/types';
+
+// ── Reports ───────────────────────────────────────────────────
 
 export function useReports(initialFilters?: ReportFilters) {
-  const toast = useToast();
   const [reports, setReports] = useState<PaginatedResponse<Report> | null>(null);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<ReportFilters>(initialFilters || {});
 
-  const fetchReports = useCallback(
-    async (overrideFilters?: ReportFilters) => {
-      setLoading(true);
-      const appliedFilters = overrideFilters ?? filters;
-      try {
-        const useMock = await shouldUseMock();
+  // Keep filters accessible inside the callback without adding it as a dep
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
-        if (useMock) {
-          let data = [...MOCK_REPORTS];
-          if (appliedFilters.search) {
-            const q = appliedFilters.search.toLowerCase();
-            data = data.filter(
-              (r) =>
-                r.title.toLowerCase().includes(q) ||
-                r.description.toLowerCase().includes(q) ||
-                r.category?.name.toLowerCase().includes(q)
-            );
-          }
-          if (appliedFilters.category_id)
-            data = data.filter((r) => r.category_id === appliedFilters.category_id);
-          if (appliedFilters.status)
-            data = data.filter((r) => r.status === appliedFilters.status);
-          if (appliedFilters.priority_level)
-            data = data.filter((r) => r.priority_level === appliedFilters.priority_level);
-          if (appliedFilters.city)
-            data = data.filter((r) => r.location?.city === appliedFilters.city);
+  const fetchReports = useCallback(async (overrideFilters?: ReportFilters) => {
+    setLoading(true);
+    const appliedFilters = overrideFilters ?? filtersRef.current;
+    try {
+      const result = await reportsApi.list(appliedFilters);
+      setReports(result);
+    } catch {
+      // Silently fail — 401 is handled globally in api.ts
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable — never recreated
 
-          if (appliedFilters.sort_by === 'priority') {
-            data.sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0));
-          } else if (appliedFilters.sort_by === 'oldest') {
-            data.sort((a, b) => a.created_at.localeCompare(b.created_at));
-          } else {
-            data.sort((a, b) => b.created_at.localeCompare(a.created_at));
-          }
-
-          setReports(mockPaginated(data, appliedFilters.page || 1, appliedFilters.per_page || 10));
-        } else {
-          const result = await reportsApi.list(appliedFilters);
-          setReports(result);
-        }
-      } catch {
-        // Fallback to mock on API error
-        toast.error('Failed to load reports — using demo data');
-        setReports(mockPaginated(MOCK_REPORTS, 1, 10));
-      } finally {
-        setLoading(false);
-      }
-    },
-    [filters, toast]
-  );
-
-  const updateFilters = useCallback(
-    (newFilters: Partial<ReportFilters>) => {
-      const merged = { ...filters, ...newFilters, page: 1 };
-      setFilters(merged);
-      fetchReports(merged);
-    },
-    [filters, fetchReports]
-  );
+  const updateFilters = useCallback((newFilters: Partial<ReportFilters>) => {
+    const merged = { ...filtersRef.current, ...newFilters, page: 1 };
+    setFilters(merged);
+    fetchReports(merged);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable
 
   return { reports, loading, filters, fetchReports, updateFilters, setFilters };
 }
 
+// ── Single report ─────────────────────────────────────────────
+
 export function useReport(id: string) {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
+    setNotFound(false);
     try {
-      const useMock = await shouldUseMock();
-      if (useMock) {
-        const found = MOCK_REPORTS.find((r) => r.id === id);
-        setReport(found ?? null);
-      } else {
-        try {
-          const result = await reportsApi.get(id);
-          setReport(result);
-        } catch {
-          // Fallback to mock
-          const found = MOCK_REPORTS.find((r) => r.id === id);
-          setReport(found ?? null);
-        }
-      }
+      const result = await reportsApi.get(id);
+      setReport(result);
+    } catch (err: unknown) {
+      const status = (err as { status?: number }).status;
+      if (status === 404) setNotFound(true);
     } finally {
       setLoading(false);
     }
+  // id is stable per page render — safe dep
   }, [id]);
 
-  return { report, loading, fetchReport };
+  return { report, loading, notFound, fetchReport };
+}
+
+// ── Categories ────────────────────────────────────────────────
+
+export function useCategories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      setCategories(await categoriesApi.list());
+    } finally {
+      setLoading(false);
+    }
+  }, []); // stable
+
+  return { categories, loading, fetchCategories };
+}
+
+// ── Admin dashboard ───────────────────────────────────────────
+
+export function useAdminDashboard() {
+  const [summary, setSummary]   = useState<DashboardSummary | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading]   = useState(false);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [s, a] = await Promise.all([
+        dashboardApi.summary(),
+        dashboardApi.analytics(),
+      ]);
+      setSummary(s);
+      setAnalytics(a);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // stable
+
+  return { summary, analytics, loading, fetchAll };
+}
+
+// ── Citizen dashboard ─────────────────────────────────────────
+
+export function useCitizenDashboard() {
+  const [summary, setSummary] = useState<CitizenDashboardSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchSummary = useCallback(async () => {
+    setLoading(true);
+    try {
+      setSummary(await dashboardApi.citizenSummary());
+    } finally {
+      setLoading(false);
+    }
+  }, []); // stable
+
+  return { summary, loading, fetchSummary };
+}
+
+// ── Clusters ──────────────────────────────────────────────────
+
+export function useClusters() {
+  const [clusters, setClusters] = useState<PaginatedResponse<ProblemCluster> | null>(null);
+  const [loading, setLoading]   = useState(false);
+
+  const fetchClusters = useCallback(async (filters?: ReportFilters) => {
+    setLoading(true);
+    try {
+      setClusters(await clustersApi.list(filters));
+    } finally {
+      setLoading(false);
+    }
+  }, []); // stable
+
+  return { clusters, loading, fetchClusters };
 }

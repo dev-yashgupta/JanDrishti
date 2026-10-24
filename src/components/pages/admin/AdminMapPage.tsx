@@ -1,12 +1,11 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DemoLabel } from '@/components/shared/DemoLabel';
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
-import { MOCK_REPORTS, MOCK_CATEGORIES } from '@/services/mockData';
+import { useReports, useCategories } from '@/hooks/useReports';
 import type { PriorityLevel, ReportStatus } from '@/types';
 
 const ProblemsMap = dynamic(() => import('@/components/maps/ProblemsMapInner'), {
@@ -14,30 +13,43 @@ const ProblemsMap = dynamic(() => import('@/components/maps/ProblemsMapInner'), 
   loading: () => <LoadingSpinner size="lg" label="Loading map…" className="h-[600px]" />,
 });
 
+const PRIORITY_COLORS: Record<string, string> = {
+  CRITICAL: '#dc2626', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e',
+};
+
 export function AdminMapPage() {
   const [filterPriority, setFilterPriority] = useState<PriorityLevel | 'ALL'>('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
-  const [filterStatus, setFilterStatus] = useState<ReportStatus | 'ALL'>('ALL');
+  const [filterStatus, setFilterStatus]     = useState<ReportStatus | 'ALL'>('ALL');
 
-  const displayed = MOCK_REPORTS.filter(r => {
-    if (filterPriority !== 'ALL' && r.priority_level !== filterPriority) return false;
-    if (filterCategory !== 'ALL' && r.category_id !== filterCategory) return false;
-    if (filterStatus !== 'ALL' && r.status !== filterStatus) return false;
-    return r.location?.latitude && r.location?.longitude;
-  });
+  const { reports, fetchReports }    = useReports();
+  const { categories, fetchCategories } = useCategories();
 
-  const priorityCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  displayed.forEach(r => priorityCounts[r.priority_level]++);
+  useEffect(() => {
+    fetchCategories();
+    fetchReports({ per_page: 100 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchReports({
+      priority_level: filterPriority !== 'ALL' ? filterPriority : undefined,
+      category_id:    filterCategory !== 'ALL' ? filterCategory : undefined,
+      status:         filterStatus   !== 'ALL' ? filterStatus   : undefined,
+      per_page: 100,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterPriority, filterCategory, filterStatus]);
+
+  const displayed = (reports?.items ?? []).filter(r => r.location?.latitude && r.location?.longitude);
+  const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+  displayed.forEach(r => { if (r.priority_level in counts) counts[r.priority_level as keyof typeof counts]++; });
 
   return (
     <AppShell>
       <div className="p-4 lg:p-6 max-w-full">
-        <div className="flex items-center gap-2 mb-4">
-          <h1 className="text-2xl font-bold text-slate-900">Map View</h1>
-          <DemoLabel />
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900 mb-4">Map View</h1>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-4">
           <Select value={filterPriority} onValueChange={v => setFilterPriority(v as PriorityLevel | 'ALL')}>
             <SelectTrigger className="w-40"><SelectValue placeholder="Priority" /></SelectTrigger>
@@ -49,7 +61,7 @@ export function AdminMapPage() {
             <SelectTrigger className="w-48"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All Categories</SelectItem>
-              {MOCK_CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
+              {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={v => setFilterStatus(v as ReportStatus | 'ALL')}>
@@ -65,29 +77,20 @@ export function AdminMapPage() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 mb-4">
-          {[
-            { level: 'CRITICAL', color: '#dc2626', count: priorityCounts.CRITICAL },
-            { level: 'HIGH',     color: '#f97316', count: priorityCounts.HIGH },
-            { level: 'MEDIUM',   color: '#eab308', count: priorityCounts.MEDIUM },
-            { level: 'LOW',      color: '#22c55e', count: priorityCounts.LOW },
-          ].map(l => (
-            <div key={l.level} className="flex items-center gap-1.5 text-xs">
-              <span className="h-3 w-3 rounded-full inline-block border border-white shadow" style={{ background: l.color }} />
-              <span className="text-slate-600">{l.level} ({l.count})</span>
+          {(['CRITICAL','HIGH','MEDIUM','LOW'] as const).map(l => (
+            <div key={l} className="flex items-center gap-1.5 text-xs">
+              <span className="h-3 w-3 rounded-full inline-block border border-white shadow" style={{ background: PRIORITY_COLORS[l] }} />
+              <span className="text-slate-600">{l} ({counts[l]})</span>
             </div>
           ))}
         </div>
 
-        {/* Map */}
         <Card className="overflow-hidden">
           <CardContent className="p-0">
             <ProblemsMap reports={displayed} height="600px" zoom={5} />
           </CardContent>
         </Card>
-
-        <p className="text-xs text-slate-400 mt-2">
-          © OpenStreetMap contributors · Click a marker to view problem details
-        </p>
+        <p className="text-xs text-slate-400 mt-2">© OpenStreetMap contributors · Click a marker to view details</p>
       </div>
     </AppShell>
   );

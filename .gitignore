@@ -1,5 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+
+.env
+.env.example
+
 # dependencies
 auto_commit.ps1
 auto_commit.bat

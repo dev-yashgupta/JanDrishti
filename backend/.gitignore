@@ -17,3 +17,5 @@ uploads/
 
 # Real env (never commit)
 .env
+.env.example
+

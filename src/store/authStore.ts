@@ -14,6 +14,12 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
 }
 
+/** Returns true for tokens that were generated in mock/demo mode */
+function isMockToken(token: string | null): boolean {
+  if (!token) return false;
+  return token.startsWith('mock-jwt-') || token.startsWith('mock-') || token.length < 20;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -42,7 +48,22 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'jd-auth',
-      partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      // When Zustand rehydrates from localStorage, discard mock/stale tokens immediately
+      onRehydrateStorage: () => (state) => {
+        if (state && isMockToken(state.token)) {
+          state.user = null;
+          state.token = null;
+          state.isAuthenticated = false;
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('jd_access_token');
+          }
+        }
+      },
     }
   )
 );

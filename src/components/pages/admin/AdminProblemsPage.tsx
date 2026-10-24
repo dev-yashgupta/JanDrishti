@@ -2,39 +2,40 @@
 import { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ReportCard } from '@/components/shared/ReportCard';
-import { DemoLabel } from '@/components/shared/DemoLabel';
-import { LoadingSpinner, EmptyState } from '@/components/shared/LoadingSpinner';
+import { LoadingSpinner } from '@/components/shared/LoadingSpinner';
+import { EmptyState } from '@/components/shared/EmptyState';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { MOCK_REPORTS, MOCK_CATEGORIES } from '@/services/mockData';
-import type { Report, ReportStatus, PriorityLevel } from '@/types';
-import { Search, SlidersHorizontal, X, Download } from 'lucide-react';
+import { useReports, useCategories } from '@/hooks/useReports';
+import type { ReportStatus, PriorityLevel } from '@/types';
+import { Search, X } from 'lucide-react';
 
 export function AdminProblemsPage() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery]         = useState('');
   const [categoryId, setCategoryId] = useState('ALL');
-  const [status, setStatus] = useState<ReportStatus | 'ALL'>('ALL');
-  const [priority, setPriority] = useState<PriorityLevel | 'ALL'>('ALL');
-  const [sortBy, setSortBy] = useState('priority');
-  const [results, setResults] = useState<Report[]>(MOCK_REPORTS);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus]       = useState<ReportStatus | 'ALL'>('ALL');
+  const [priority, setPriority]   = useState<PriorityLevel | 'ALL'>('ALL');
+  const [sortBy, setSortBy]       = useState('priority');
+
+  const { reports, loading, fetchReports } = useReports();
+  const { categories, fetchCategories }    = useCategories();
+
+  useEffect(() => { fetchCategories(); }, []);
 
   useEffect(() => {
-    setLoading(true);
     const t = setTimeout(() => {
-      let data = [...MOCK_REPORTS];
-      if (query) { const q = query.toLowerCase(); data = data.filter(r => r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q) || r.location?.city.toLowerCase().includes(q)); }
-      if (categoryId !== 'ALL') data = data.filter(r => r.category_id === categoryId);
-      if (status !== 'ALL') data = data.filter(r => r.status === status);
-      if (priority !== 'ALL') data = data.filter(r => r.priority_level === priority);
-      if (sortBy === 'priority') data.sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0));
-      else if (sortBy === 'newest') data.sort((a, b) => b.created_at.localeCompare(a.created_at));
-      else if (sortBy === 'support') data.sort((a, b) => b.support_count - a.support_count);
-      setResults(data);
-      setLoading(false);
-    }, 150);
+      fetchReports({
+        search: query || undefined,
+        category_id: categoryId !== 'ALL' ? categoryId : undefined,
+        status: status !== 'ALL' ? status : undefined,
+        priority_level: priority !== 'ALL' ? priority : undefined,
+        sort_by: sortBy as 'priority' | 'newest' | 'oldest' | 'most_reported',
+        page: 1,
+        per_page: 20,
+      });
+    }, 300);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, categoryId, status, priority, sortBy]);
 
   const hasFilters = query || categoryId !== 'ALL' || status !== 'ALL' || priority !== 'ALL';
@@ -43,30 +44,25 @@ export function AdminProblemsPage() {
   return (
     <AppShell>
       <div className="p-4 lg:p-8 max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900">Problems</h1>
-            <DemoLabel />
-            <span className="text-sm text-slate-400">({results.length} shown)</span>
+            <span className="text-sm text-slate-400">({reports?.total ?? 0} total)</span>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-4 w-4" /> Export</Button>
         </div>
 
         {/* Filters */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6 space-y-3">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search title, description, city…" className="pl-9" />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search title, description, city…" className="pl-9" />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Categories</SelectItem>
-                {MOCK_CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
+                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.icon} {c.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={v => setStatus(v as ReportStatus | 'ALL')}>
@@ -90,7 +86,7 @@ export function AdminProblemsPage() {
               <SelectContent>
                 <SelectItem value="priority">Highest Priority</SelectItem>
                 <SelectItem value="newest">Newest First</SelectItem>
-                <SelectItem value="support">Most Supported</SelectItem>
+                <SelectItem value="most_reported">Most Supported</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -101,14 +97,14 @@ export function AdminProblemsPage() {
           )}
         </div>
 
-        {/* List */}
         {loading ? (
           <LoadingSpinner size="lg" label="Loading…" className="py-20" />
-        ) : results.length === 0 ? (
-          <EmptyState icon="🔍" title="No problems match your filters" action={{ label: 'Clear Filters', onClick: clearFilters }} />
+        ) : !reports?.items.length ? (
+          <EmptyState icon="🔍" title="No problems match your filters"
+            action={{ label: 'Clear Filters', onClick: clearFilters }} />
         ) : (
           <div className="space-y-3">
-            {results.map(r => <ReportCard key={r.id} report={r} isAdmin />)}
+            {reports.items.map(r => <ReportCard key={r.id} report={r} isAdmin />)}
           </div>
         )}
       </div>

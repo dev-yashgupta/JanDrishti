@@ -8,7 +8,7 @@ export const APP_DESCRIPTION =
   'JanDrishti AI uses artificial intelligence and community intelligence to identify, analyse and prioritise unresolved civic problems across India.';
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || '/api';  // relative path uses Next.js rewrites proxy
+  process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_FILE_SIZE_MB = 10;
@@ -38,8 +38,6 @@ export const PRIORITY_THRESHOLDS = {
 export const SIMILARITY_THRESHOLD = 0.75;
 export const SIMILARITY_RADIUS_KM = 2.0;
 
-// Demo data label — shown on any seeded content
-export const DEMO_LABEL = '⚡ Demo Data';
 
 // Supported languages
 export const SUPPORTED_LANGUAGES = [
