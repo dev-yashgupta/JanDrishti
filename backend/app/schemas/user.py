@@ -45,6 +45,13 @@ class UserUpdate(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
 
+    @field_validator("phone", "city", "state", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == "":
+            return None
+        return v
+
 
 class UserResponse(UserBase):
     id: str

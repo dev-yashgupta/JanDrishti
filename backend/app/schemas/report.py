@@ -1,6 +1,6 @@
 """Report schemas."""
-from datetime import datetime
-from typing import Optional, List
+from datetime import datetime, date
+from typing import Optional, List, Union
 from pydantic import BaseModel, field_validator
 
 from app.schemas.category import CategoryResponse
@@ -30,9 +30,22 @@ class ReportCreate(BaseModel):
     state: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    date_observed: Optional[datetime] = None
+    date_observed: Optional[Union[datetime, date, str]] = None
     contact_info: Optional[str] = None
     is_anonymous: bool = False
+
+    @field_validator("date_observed", mode="before")
+    @classmethod
+    def parse_date_observed(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, (datetime, date)):
+            return v
+        # Accept "YYYY-MM-DD" from HTML date input
+        try:
+            return datetime.fromisoformat(str(v))
+        except ValueError:
+            return None
 
     @field_validator("title")
     @classmethod
@@ -138,7 +151,6 @@ class ReportResponse(BaseModel):
     contact_info: Optional[str] = None
     is_anonymous: bool
     cluster_id: Optional[str] = None
-    is_demo: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -155,7 +167,6 @@ class ReportSummary(BaseModel):
     category: Optional[CategoryResponse] = None
     location: Optional[LocationResponse] = None
     support_count: int
-    is_demo: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}

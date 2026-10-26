@@ -2,9 +2,9 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
-import { authApi, setStoredToken, clearStoredToken } from '@/services/api';
+import { authApi, usersApi, setStoredToken, clearStoredToken } from '@/services/api';
 import { useUIStore } from '@/store/uiStore';
-import type { LoginCredentials, RegisterData } from '@/types';
+import type { LoginCredentials, RegisterData, User } from '@/types';
 
 export function useAuth() {
   const { user, token, isAuthenticated, isLoading, setAuth, setUser, clearAuth, setLoading } =
@@ -76,6 +76,26 @@ export function useAuth() {
     }
   }, [setUser, clearAuth]);
 
+  const updateProfile = useCallback(
+    async (data: Partial<User>) => {
+      setLoading(true);
+      try {
+        const targetId = user?.id || 'me';
+        const updated = await usersApi.update(targetId, data);
+        setUser(updated);
+        addToast({ type: 'success', title: 'Profile updated', message: 'Your personal details have been saved.' });
+        return { success: true, user: updated };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to update profile.';
+        addToast({ type: 'error', title: 'Update failed', message: msg });
+        return { success: false, error: msg };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, setUser, setLoading, addToast]
+  );
+
   return {
     user,
     token,
@@ -85,6 +105,7 @@ export function useAuth() {
     register,
     logout,
     refreshUser,
+    updateProfile,
     isAuthority: user?.role === 'AUTHORITY' || user?.role === 'SUPER_ADMIN',
     isSuperAdmin: user?.role === 'SUPER_ADMIN',
   };

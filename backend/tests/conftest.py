@@ -1,7 +1,9 @@
 """
 Test fixtures — in-memory SQLite DB for fast, isolated tests.
+The lifespan (which connects to Neon) is disabled during tests.
 """
 import pytest
+from contextlib import asynccontextmanager
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
@@ -45,7 +47,18 @@ def db():
 
 @pytest.fixture()
 def client(db: Session):
-    """FastAPI test client with DB override."""
+    """
+    FastAPI test client with:
+    - DB overridden to SQLite
+    - Lifespan disabled (avoids connecting to Neon during tests)
+    """
+    # Disable lifespan so we never touch the real DB on startup
+    @asynccontextmanager
+    async def no_lifespan(app):
+        yield
+
+    app.router.lifespan_context = no_lifespan
+
     def override_get_db():
         try:
             yield db
@@ -53,8 +66,10 @@ def client(db: Session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
+
+    with TestClient(app, raise_server_exceptions=True) as c:
         yield c
+
     app.dependency_overrides.clear()
 
 

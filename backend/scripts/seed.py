@@ -1,12 +1,12 @@
 """
-Seed script — populates the database with realistic synthetic demo data.
+Seed script — populates the database with initial data.
 
 Usage:
     cd backend
     python scripts/seed.py
 
-All seeded records are clearly labelled as demo data (is_demo=True on reports).
-Do NOT run against a production database.
+Creates default categories, initial user accounts, and sample reports
+so the application has data to work with immediately after setup.
 """
 import sys
 import os
@@ -176,7 +176,7 @@ DEMO_REPORTS = [
 
 def seed_database():
     db = SessionLocal()
-    print("⚡ JanDrishti AI — Demo Seed Script")
+    print("JanDrishti AI — Seed Script")
     print("=" * 50)
 
     try:
@@ -275,7 +275,6 @@ def seed_database():
                 support_count=random.randint(5, 89),
                 view_count=random.randint(50, 500),
                 is_anonymous=False,
-                is_demo=True,
                 created_at=created_at,
                 updated_at=created_at + timedelta(hours=random.randint(1, 48)),
                 date_observed=created_at - timedelta(hours=random.randint(1, 24)),
@@ -425,7 +424,7 @@ def seed_database():
             user_id=user_map["admin@demo.jandrishti.in"].id,
             action="SEED_RUN",
             entity_type="SYSTEM",
-            detail="Demo seed script executed successfully.",
+            detail="Seed script executed successfully.",
         )
         db.add(log)
         db.commit()
@@ -434,12 +433,10 @@ def seed_database():
         print("=" * 50)
         print("✅ Seed complete!")
         print()
-        print("Demo accounts:")
-        print("  Citizen:    citizen@demo.jandrishti.in / Demo@1234")
-        print("  Authority:  authority@demo.jandrishti.in / Demo@1234")
+        print("Seeded accounts:")
+        print("  Citizen:     citizen@demo.jandrishti.in / Demo@1234")
+        print("  Authority:   authority@demo.jandrishti.in / Demo@1234")
         print("  Super Admin: admin@demo.jandrishti.in / Demo@1234")
-        print()
-        print("⚡ All seeded data is labelled as DEMO — do not use in production.")
 
     except Exception as e:
         db.rollback()

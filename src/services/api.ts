@@ -111,8 +111,14 @@ export const authApi = {
 
 // ── Reports API ───────────────────────────────────────────────
 export const reportsApi = {
-  create: (data: ReportCreateData) =>
-    request<Report>('/reports', { method: 'POST', body: data }),
+  create: (data: ReportCreateData) => {
+    // Strip empty strings from optional fields so Pydantic doesn't receive "" for datetime/float
+    const clean: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (v !== '' && v !== undefined && v !== null) clean[k] = v;
+    }
+    return request<Report>('/reports', { method: 'POST', body: clean });
+  },
 
   list: (filters?: ReportFilters) => {
     const params = new URLSearchParams();
@@ -138,14 +144,22 @@ export const reportsApi = {
   changeStatus: (id: string, new_status: string, note?: string) =>
     request<Report>(`/reports/${id}/status`, { method: 'PATCH', body: { new_status, note } }),
 
+  updateStatus: (id: string, data: { status?: string; new_status?: string; note?: string } | string, note?: string) => {
+    const new_status = typeof data === 'string' ? data : data.new_status || data.status || '';
+    const finalNote = typeof data === 'string' ? note : data.note ?? note;
+    return request<Report>(`/reports/${id}/status`, { method: 'PATCH', body: { new_status, note: finalNote } });
+  },
+
   assign: (id: string, data: { assigned_to_id: string; department?: string; due_date?: string; notes?: string }) =>
     request<Report>(`/reports/${id}/assign`, { method: 'POST', body: data }),
 
   getStatusHistory: (id: string) =>
     request<StatusHistory[]>(`/reports/${id}/history`),
 
-  addComment: (id: string, data: { content: string; is_internal: boolean }) =>
-    request<Comment>(`/reports/${id}/comments`, { method: 'POST', body: data }),
+  addComment: (id: string, data: { content: string; is_internal?: boolean } | string) => {
+    const body = typeof data === 'string' ? { content: data, is_internal: false } : { is_internal: false, ...data };
+    return request<Comment>(`/reports/${id}/comments`, { method: 'POST', body });
+  },
 
   getComments: (id: string) =>
     request<Comment[]>(`/reports/${id}/comments`),
@@ -206,7 +220,9 @@ export const usersApi = {
   },
   get: (id: string) => request<User>(`/users/${id}`),
   update: (id: string, data: Partial<User>) =>
-    request<User>(`/users/${id}`, { method: 'PATCH', body: data }),
+    request<User>(`/users/${id || 'me'}`, { method: 'PATCH', body: data }),
+  updateMe: (data: Partial<User>) =>
+    request<User>('/users/me', { method: 'PATCH', body: data }),
   deactivate: (id: string) =>
     request<User>(`/users/${id}/deactivate`, { method: 'PATCH' }),
   activate: (id: string) =>

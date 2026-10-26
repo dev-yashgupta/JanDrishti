@@ -33,13 +33,32 @@ def list_all_users(
     }
 
 
+@router.get("/me", response_model=UserResponse)
+def get_current_user_profile(
+    current_user: User = Depends(get_current_active_user),
+):
+    return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_current_user_profile(
+    data: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    return UserResponse.model_validate(update_user(db, current_user, data))
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(require_authority),
+    current_user: User = Depends(get_current_active_user),
 ):
-    user = get_user_by_id(db, user_id)
+    target_id = current_user.id if user_id in ("me", "@me") else user_id
+    if current_user.id != target_id and current_user.role not in ("AUTHORITY", "SUPER_ADMIN"):
+        raise HTTPException(status_code=403, detail="Not authorised")
+    user = get_user_by_id(db, target_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return UserResponse.model_validate(user)
@@ -52,10 +71,11 @@ def update_user_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
+    target_id = current_user.id if user_id in ("me", "@me") else user_id
     # Users can update themselves; admins can update anyone
-    if current_user.id != user_id and current_user.role not in ("AUTHORITY", "SUPER_ADMIN"):
+    if current_user.id != target_id and current_user.role not in ("AUTHORITY", "SUPER_ADMIN"):
         raise HTTPException(status_code=403, detail="Not authorised")
-    user = get_user_by_id(db, user_id)
+    user = get_user_by_id(db, target_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return UserResponse.model_validate(update_user(db, user, data))

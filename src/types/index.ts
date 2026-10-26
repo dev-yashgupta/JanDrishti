@@ -64,6 +64,7 @@ export interface Category {
 export interface Location {
   id: string;
   address?: string;
+  locality?: string;
   city: string;
   district?: string;
   state: string;
@@ -145,6 +146,7 @@ export interface Report {
   reporter_id: string;
   reporter?: User;
   media?: Media[];
+  image_url?: string;
   ai_analysis?: AIAnalysis;
   support_count: number;
   view_count: number;

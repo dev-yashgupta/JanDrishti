@@ -15,23 +15,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # ── Enums ────────────────────────────────────────────────
-    op.execute("CREATE TYPE user_role AS ENUM ('CITIZEN','AUTHORITY','SUPER_ADMIN')")
-    op.execute(
-        "CREATE TYPE report_status AS ENUM ("
-        "'REPORTED','UNDER_REVIEW','VERIFIED','ASSIGNED',"
-        "'IN_PROGRESS','RESOLVED','CITIZEN_VERIFICATION','CLOSED')"
-    )
-    op.execute("CREATE TYPE priority_level AS ENUM ('LOW','MEDIUM','HIGH','CRITICAL')")
-    op.execute(
-        "CREATE TYPE cluster_priority AS ENUM ('LOW','MEDIUM','HIGH','CRITICAL')"
-    )
-    op.execute(
-        "CREATE TYPE cluster_status AS ENUM ("
-        "'REPORTED','UNDER_REVIEW','VERIFIED','ASSIGNED',"
-        "'IN_PROGRESS','RESOLVED','CITIZEN_VERIFICATION','CLOSED')"
-    )
-    op.execute("CREATE TYPE media_type AS ENUM ('IMAGE','VIDEO','DOCUMENT')")
+    # -- Enums (safe: skipped if they already exist) ----
+    op.execute("""DO $$ BEGIN CREATE TYPE user_role AS ENUM ('CITIZEN','AUTHORITY','SUPER_ADMIN'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
+    op.execute("""DO $$ BEGIN CREATE TYPE report_status AS ENUM ('REPORTED','UNDER_REVIEW','VERIFIED','ASSIGNED','IN_PROGRESS','RESOLVED','CITIZEN_VERIFICATION','CLOSED'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
+    op.execute("""DO $$ BEGIN CREATE TYPE priority_level AS ENUM ('LOW','MEDIUM','HIGH','CRITICAL'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
+    op.execute("""DO $$ BEGIN CREATE TYPE cluster_priority AS ENUM ('LOW','MEDIUM','HIGH','CRITICAL'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
+    op.execute("""DO $$ BEGIN CREATE TYPE cluster_status AS ENUM ('REPORTED','UNDER_REVIEW','VERIFIED','ASSIGNED','IN_PROGRESS','RESOLVED','CITIZEN_VERIFICATION','CLOSED'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
+    op.execute("""DO $$ BEGIN CREATE TYPE media_type AS ENUM ('IMAGE','VIDEO','DOCUMENT'); EXCEPTION WHEN duplicate_object THEN null; END $$""")
 
     # ── users ────────────────────────────────────────────────
     op.create_table(
@@ -41,7 +31,7 @@ def upgrade() -> None:
         sa.Column("email", sa.String(255), nullable=False, unique=True),
         sa.Column("phone", sa.String(15)),
         sa.Column("hashed_password", sa.String(255), nullable=False),
-        sa.Column("role", sa.Enum("CITIZEN","AUTHORITY","SUPER_ADMIN", name="user_role"), nullable=False, server_default="CITIZEN"),
+        sa.Column("role", sa.Enum("CITIZEN","AUTHORITY","SUPER_ADMIN", name="user_role", create_type=False), nullable=False, server_default="CITIZEN"),
         sa.Column("preferred_language", sa.String(10), server_default="en"),
         sa.Column("city", sa.String(100)),
         sa.Column("state", sa.String(100)),
@@ -93,8 +83,8 @@ def upgrade() -> None:
         sa.Column("report_count", sa.Integer, server_default="1"),
         sa.Column("total_support", sa.Integer, server_default="0"),
         sa.Column("priority_score", sa.Float, server_default="50"),
-        sa.Column("priority_level", sa.Enum("LOW","MEDIUM","HIGH","CRITICAL", name="cluster_priority"), server_default="MEDIUM"),
-        sa.Column("status", sa.Enum("REPORTED","UNDER_REVIEW","VERIFIED","ASSIGNED","IN_PROGRESS","RESOLVED","CITIZEN_VERIFICATION","CLOSED", name="cluster_status"), server_default="REPORTED"),
+        sa.Column("priority_level", sa.Enum("LOW","MEDIUM","HIGH","CRITICAL", name="cluster_priority", create_type=False), server_default="MEDIUM"),
+        sa.Column("status", sa.Enum("REPORTED","UNDER_REVIEW","VERIFIED","ASSIGNED","IN_PROGRESS","RESOLVED","CITIZEN_VERIFICATION","CLOSED", name="cluster_status", create_type=False), server_default="REPORTED"),
         sa.Column("representative_report_id", sa.String(36)),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
@@ -106,8 +96,8 @@ def upgrade() -> None:
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("title", sa.String(200), nullable=False),
         sa.Column("description", sa.Text, nullable=False),
-        sa.Column("status", sa.Enum("REPORTED","UNDER_REVIEW","VERIFIED","ASSIGNED","IN_PROGRESS","RESOLVED","CITIZEN_VERIFICATION","CLOSED", name="report_status"), nullable=False, server_default="REPORTED"),
-        sa.Column("priority_level", sa.Enum("LOW","MEDIUM","HIGH","CRITICAL", name="priority_level"), nullable=False, server_default="MEDIUM"),
+        sa.Column("status", sa.Enum("REPORTED","UNDER_REVIEW","VERIFIED","ASSIGNED","IN_PROGRESS","RESOLVED","CITIZEN_VERIFICATION","CLOSED", name="report_status", create_type=False), nullable=False, server_default="REPORTED"),
+        sa.Column("priority_level", sa.Enum("LOW","MEDIUM","HIGH","CRITICAL", name="priority_level", create_type=False), nullable=False, server_default="MEDIUM"),
         sa.Column("priority_score", sa.Float),
         sa.Column("category_id", sa.String(36), sa.ForeignKey("categories.id"), nullable=False),
         sa.Column("location_id", sa.String(36), sa.ForeignKey("locations.id")),
@@ -118,7 +108,6 @@ def upgrade() -> None:
         sa.Column("date_observed", sa.DateTime(timezone=True)),
         sa.Column("contact_info", sa.String(200)),
         sa.Column("is_anonymous", sa.Boolean, server_default="false"),
-        sa.Column("is_demo", sa.Boolean, server_default="false"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
     )
@@ -135,7 +124,7 @@ def upgrade() -> None:
         sa.Column("report_id", sa.String(36), sa.ForeignKey("reports.id"), nullable=False),
         sa.Column("url", sa.String(500), nullable=False),
         sa.Column("thumbnail_url", sa.String(500)),
-        sa.Column("media_type", sa.Enum("IMAGE","VIDEO","DOCUMENT", name="media_type"), nullable=False),
+        sa.Column("media_type", sa.Enum("IMAGE","VIDEO","DOCUMENT", name="media_type", create_type=False), nullable=False),
         sa.Column("filename", sa.String(255), nullable=False),
         sa.Column("size_bytes", sa.Integer, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),

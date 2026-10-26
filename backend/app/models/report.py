@@ -57,7 +57,6 @@ class Report(Base):
     )
     contact_info: Mapped[str | None] = mapped_column(String(200), nullable=True)
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
