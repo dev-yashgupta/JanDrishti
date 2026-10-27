@@ -1,6 +1,7 @@
 """
 Application configuration — loaded from environment variables / .env file.
 """
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +25,13 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+psycopg://jandrishti:jandrishti_pass@localhost:5432/jandrishti_db"
     )
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        return v
 
     # ── Security ──────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
